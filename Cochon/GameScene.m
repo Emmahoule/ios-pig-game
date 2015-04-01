@@ -23,12 +23,15 @@
 
 -(id)initWithSize:(CGSize)size {
     if (self = [super initWithSize:size]) {
-       
-        SKLabelNode *label = [SKLabelNode labelNodeWithFontNamed:@"Bebas"];
-        label.text = @"Hellow world!";
-        [self addChild:label];
+
+        
+        SKSpriteNode *cochon = [SKSpriteNode spriteNodeWithImageNamed:@"pig"];
+        cochon.position = CGPointMake(size.width / 2, size.height / 2);
+        cochon.zRotation = 0;
+        [self addChild:cochon];
         
      }
+    
     return self;
 }
 
