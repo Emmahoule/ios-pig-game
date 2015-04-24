@@ -29,8 +29,14 @@
         pig.position = CGPointMake(size.width / 2, size.height / 2);
         pig.zRotation = 0;
         pig.name = @"pig";
-        pig.zPosition = 20;
+        pig.zPosition = 40;
         [self addChild:pig];
+        
+        // Train
+        SKEmitterNode *train = [SKEmitterNode nodeWithFile:@"train.sks"];
+        train.position = CGPointMake(-26,0);
+        train.zRotation = 80;
+        [pig addChild:train];
         
         
         // Tiled Background
@@ -49,7 +55,7 @@
         backgroundTiles.name = @"background";
         backgroundTiles.zPosition = 0;
         [self addChild:backgroundTiles];
-        
+    
      }
     
     return self;
@@ -65,20 +71,107 @@
     NSTimeInterval delta = currentTime - self.lastUpdatedTime;
     if (self.pigTouch){
         CGPoint touchLocation = [self.pigTouch locationInNode:self];
-        [self movePig:touchLocation byTimeDelta:delta];
+        [self changeDirectionPig:touchLocation byTimeDelta:delta];
     }
     self.lastUpdatedTime = currentTime;
     
+    
+    // Génération aléatoire de fermiers
+    NSInteger dropGameObjectFrequency = 20;
+    if(arc4random_uniform(3000)<= dropGameObjectFrequency) {
+        [self dropGameObject];
+    }
+
+
+    [self movePigAndAnchor];
+    [self moveFarmers];
+    [self checkForCollision];
+    [self enforceBoundaries];
+    
+    
+//    NSLog(@"position anchor Point : %f ", self.anchorPoint.x);
+//    NSLog(@"position cochon : %f ", pig.position.x);
+
+    
+}
+
+-(void)enforceBoundaries {
+    SKNode *pig = [self childNodeWithName:@"pig"];
+    CGFloat largeurGame = 1500;
+    CGFloat hauteurGame = 1500;
+    if (pig.position.x > largeurGame) {
+        pig.position = CGPointMake(-largeurGame, pig.position.y);
+        self.anchorPoint = CGPointMake(largeurGame/self.size.width+0.5, self.anchorPoint.y);
+        [self enforceBoundariesFarmer:-largeurGame y:0];
+    }
+    if (pig.position.x < -largeurGame) {
+        pig.position = CGPointMake(largeurGame, pig.position.y);
+        self.anchorPoint = CGPointMake(-largeurGame/self.size.width+0.5, self.anchorPoint.y);
+        [self enforceBoundariesFarmer:largeurGame y:0];
+    }
+    if (pig.position.y > hauteurGame) {
+        pig.position = CGPointMake(pig.position.x, -hauteurGame);
+        self.anchorPoint = CGPointMake(self.anchorPoint.x, hauteurGame/self.size.height+0.5);
+        [self enforceBoundariesFarmer:0 y:-hauteurGame];
+    }
+    if (pig.position.y < -hauteurGame) {
+        pig.position = CGPointMake(pig.position.x, hauteurGame);
+        self.anchorPoint = CGPointMake(self.anchorPoint.x, -hauteurGame/self.size.height+0.5);
+        [self enforceBoundariesFarmer:0 y:hauteurGame];
+    }
+}
+
+-(void)enforceBoundariesFarmer:(int)x y:(int)y {
+    [self enumerateChildNodesWithName:@"farmer" usingBlock:^(SKNode *farmer, BOOL *stop) {
+        farmer.position = CGPointMake(farmer.position.x + 2*x, farmer.position.y + 2*y);
+    }];
+}
+
+
+-(void)movePigAndAnchor {
     // Faire bouger le cochon
-    CGFloat pigSpeed = 3;
+    CGFloat pigSpeed = 8;
     SKNode *pig = [self childNodeWithName:@"pig"];
     CGFloat newX = pigSpeed * cos(pig.zRotation);
     CGFloat newY = pigSpeed * sin(pig.zRotation);
     pig.position = CGPointMake(pig.position.x + newX, pig.position.y + newY);
     
+    // Faire bouger le point d'ancrage
     self.anchorPoint = CGPointMake(self.anchorPoint.x - newX/self.size.width,self.anchorPoint.y - newY/self.size.height);
-    
-    
+}
+
+
+
+-(void)moveFarmers {
+    SKNode *pig = [self childNodeWithName:@"pig"];
+    [self enumerateChildNodesWithName:@"farmer" usingBlock:^(SKNode *farmer, BOOL *stop) {
+        CGFloat farmerSpeed = 6;
+        CGFloat newXFarmer = farmerSpeed * cos(farmer.zRotation);
+        CGFloat newYFarmer = farmerSpeed * sin(farmer.zRotation);
+        farmer.position = CGPointMake(farmer.position.x + newXFarmer, farmer.position.y + newYFarmer);
+        CGFloat angleIdeal = atan2f(pig.position.y-farmer.position.y, pig.position.x-farmer.position.x);
+        if (farmer.zRotation > angleIdeal-0.08  && farmer.zRotation < angleIdeal+0.08) {
+            farmer.zRotation = farmer.zRotation;
+        }
+        else if (angleIdeal > farmer.zRotation) {
+            farmer.zRotation = farmer.zRotation + 0.08;
+        }
+        else if (angleIdeal < farmer.zRotation)  {
+            farmer.zRotation = farmer.zRotation - 0.08;
+        }
+    }];
+}
+
+
+
+-(void)checkForCollision {
+    SKNode *pig = [self childNodeWithName:@"pig"];
+    [self enumerateChildNodesWithName:@"farmer" usingBlock:^(SKNode *farmer, BOOL *stop) {
+        if ([pig intersectsNode:farmer]){
+            [farmer removeFromParent];
+            NSLog(@"Game Over !");
+        }
+    }];
 }
 
 
@@ -87,22 +180,29 @@
 }
 
 
--(void)movePig:(CGPoint)point byTimeDelta:(NSTimeInterval)timeDelta {
+-(void)changeDirectionPig:(CGPoint)point byTimeDelta:(NSTimeInterval)timeDelta {
     CGPoint touchLocation = [self.pigTouch locationInNode:self];
     SKNode *pig = [self childNodeWithName:@"pig"];
-    if (touchLocation.x<self.view.bounds.size.width/2 + self.anchorPoint.x) {
+    if (touchLocation.x>pig.position.x) {
         pig.zRotation = pig.zRotation + 0.1;
     }
     else {
         pig.zRotation = pig.zRotation - 0.1;
     }
 
+
 }
 
 
+-(void)dropGameObject{
+    [self dropFarmer];
+}
 
-
-
-
+-(void)dropFarmer{
+    SKSpriteNode *farmer = [SKSpriteNode spriteNodeWithImageNamed:@"farmer"];
+    farmer.name = @"farmer";
+    farmer.zPosition = 30;
+    [self addChild:farmer];
+}
 
 @end
