@@ -3,15 +3,17 @@
     {
       "idiom" : "universal",
       "scale" : "1x",
-      "filename" : "Spaceship.png"
+      "filename" : "app-icon.jpg"
     },
     {
       "idiom" : "universal",
-      "scale" : "2x"
+      "scale" : "2x",
+      "filename" : "app-icon-1.jpg"
     },
     {
       "idiom" : "universal",
-      "scale" : "3x"
+      "scale" : "3x",
+      "filename" : "app-icon-2.jpg"
     }
   ],
   "info" : {
